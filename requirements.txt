@@ -1,0 +1,1 @@
+gymnasium==0.29.1 stable-baselines3==2.3.2 pygame==2.6.0 numpy==1.26.4 imageio==2.34.0
