@@ -1,0 +1,28 @@
+# Virtual environment files
+venv/
+.venv/
+env/
+ENV/
+
+# Python cache and build files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Dependency directories
+*.egg-info/
+build/
+dist/
+pip-wheel-metadata/
+
+# Environment variables
+.env
+.env.local
+
+# IDE-specific files (e.g., VS Code, PyCharm)
+.vscode/
+.idea/
+
+# System files
+.DS_Store
