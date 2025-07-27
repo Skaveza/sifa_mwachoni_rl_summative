@@ -9,21 +9,18 @@ from stable_baselines3.common.monitor import Monitor
 from environment.custom_env import TradingEnv
 import numpy as np
 
-# Set seeds
 np.random.seed(42)
 random.seed(42)
 torch.manual_seed(42)
 
-# Initialize environment
 env = TradingEnv()
 env = Monitor(env)
 
-# Load existing model
 model_path = "models/dqn/dqn_trading_env"
 if os.path.exists(model_path + ".zip"):
     print("Loading existing model...")
     model = DQN.load(model_path, env=env)
-    # Update hyperparameters
+
     model.learning_rate = 3e-6
     model.buffer_size = 250000
     model.learning_starts = 5000
@@ -51,13 +48,10 @@ else:
         verbose=1
     )
 
-# Train
 model.learn(total_timesteps=500000, log_interval=100, reset_num_timesteps=False)
 
-# Save
 os.makedirs("models/dqn", exist_ok=True)
 model.save("models/dqn/dqn_trading_env")
 
-# Evaluate
 mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=50)
 print(f"DQN Mean reward: {mean_reward:.2f} +/- {std_reward:.2f}")

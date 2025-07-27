@@ -7,7 +7,7 @@ for _ in range(episodes):
     obs = env.reset()[0]
     done = False
     while not done:
-        action = 15  # No-action
+        action = 15
         obs, reward, done, truncated, _ = env.step(action)
         total_reward += reward
 baseline_reward = total_reward / episodes
