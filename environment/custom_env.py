@@ -27,7 +27,7 @@ class TradingEnv(gym.Env):
         super().reset(seed=seed)
         self.step_count = 0
         self.cash = self.initial_cash
-        self.shares = np.ones(self.num_assets) * 30  # Start with 30 shares per asset
+        self.shares = np.ones(self.num_assets) * 50  # Start with 50 shares per asset
         self.prices = np.random.uniform(50, 150, self.num_assets)
         self.portfolio_value = self.cash + np.sum(self.shares * self.prices)
         self.dividends = np.zeros(self.num_assets)  # For rendering
@@ -47,7 +47,7 @@ class TradingEnv(gym.Env):
         self.dividends = np.zeros(self.num_assets)  # Reset for rendering
 
         # Simulate stock price movement
-        self.prices += np.random.normal(0.5, 0.5, self.num_assets)
+        self.prices += np.random.normal(0.6, 0.5, self.num_assets)
         self.prices = np.maximum(0, self.prices)
         self.moving_avg = 0.9 * self.moving_avg + 0.1 * self.prices  # For rendering
 
@@ -67,12 +67,10 @@ class TradingEnv(gym.Env):
                 if self.cash >= self.prices[asset_idx]:
                     self.shares[asset_idx] += 1
                     self.cash -= self.prices[asset_idx]
-                    # No transaction cost
             elif action_type == 2:  # Sell
                 if self.shares[asset_idx] > 0:
                     self.shares[asset_idx] -= 1
                     self.cash += self.prices[asset_idx]
-                    # No transaction cost
         elif action == self.num_assets * 3:  # No-action
             reward += 0.01
 
