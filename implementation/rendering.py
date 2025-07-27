@@ -47,7 +47,7 @@ def save_gif(env, filename='trading_env_random.gif', max_steps=100, fps=10):
     state, _ = env.reset()
     for _ in range(max_steps):
         action = env.action_space.sample()
-        state, reward, done, truncated, info = env.step(action)
+        state, reward, done, truncated, _ = env.step(action)
         renderer.render(env)
         frames.append(renderer.get_frame())
         if done or truncated:
