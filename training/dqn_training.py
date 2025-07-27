@@ -24,21 +24,21 @@ if os.path.exists(model_path + ".zip"):
     print("Loading existing model...")
     model = DQN.load(model_path, env=env)
     # Update hyperparameters
-    model.learning_rate = 5e-6
+    model.learning_rate = 3e-6
     model.buffer_size = 250000
     model.learning_starts = 5000
     model.batch_size = 64
     model.tau = 0.005
     model.gamma = 0.95
     model.target_update_interval = 100
-    model.exploration_fraction = 0.05
-    model.exploration_final_eps = 0.01
+    model.exploration_fraction = 0.1
+    model.exploration_final_eps = 0.02
 else:
     print("Creating new model...")
     model = DQN(
         policy="MlpPolicy",
         env=env,
-        learning_rate=5e-6,
+        learning_rate=3e-6,
         buffer_size=250000,
         learning_starts=5000,
         batch_size=64,
@@ -46,8 +46,8 @@ else:
         gamma=0.95,
         train_freq=4,
         target_update_interval=100,
-        exploration_fraction=0.05,
-        exploration_final_eps=0.01,
+        exploration_fraction=0.1,
+        exploration_final_eps=0.02,
         verbose=1
     )
 

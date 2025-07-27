@@ -10,6 +10,7 @@ class TradingEnv(gym.Env):
         self.initial_cash = 10000
         self.max_steps = 100
         self.max_shares = 100
+        self.transaction_cost = 0.001  # 0.1% per trade
 
         # State: [cash, shares (5), prices (5)]
         state_size = 1 + self.num_assets + self.num_assets
@@ -65,12 +66,16 @@ class TradingEnv(gym.Env):
                 reward += 0.01
             elif action_type == 1:  # Buy
                 if self.cash >= self.prices[asset_idx]:
+                    cost = self.prices[asset_idx] * (1 + self.transaction_cost)
                     self.shares[asset_idx] += 1
-                    self.cash -= self.prices[asset_idx]
+                    self.cash -= cost
+                    reward -= cost / self.initial_cash
             elif action_type == 2:  # Sell
                 if self.shares[asset_idx] > 0:
+                    revenue = self.prices[asset_idx] * (1 - self.transaction_cost)
                     self.shares[asset_idx] -= 1
-                    self.cash += self.prices[asset_idx]
+                    self.cash += revenue
+                    reward -= self.prices[asset_idx] * self.transaction_cost / self.initial_cash
         elif action == self.num_assets * 3:  # No-action
             reward += 0.01
 
