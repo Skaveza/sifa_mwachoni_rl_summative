@@ -1,57 +1,49 @@
 import os
 import sys
-import random
-import torch
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import numpy as np
 from stable_baselines3 import DQN
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from environment.custom_env import TradingEnv
-import numpy as np
 
-np.random.seed(42)
-random.seed(42)
-torch.manual_seed(42)
+class DQNTrainer:
+    def __init__(self):
+        self.results = []
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(current_dir)
+        sys.path.append(project_root)
+        
+    def train(self):
+        env = Monitor(TradingEnv())
+        os.makedirs("models/dqn", exist_ok=True)
+        
+        model = DQN(
+            policy="MlpPolicy",
+            env=env,
+            learning_rate=1e-5,
+            buffer_size=500000,
+            learning_starts=10000,
+            batch_size=128,
+            tau=0.005,
+            gamma=0.95,
+            train_freq=4,
+            gradient_steps=2,
+            target_update_interval=500,
+            exploration_fraction=0.2,
+            exploration_final_eps=0.05,
+            verbose=1
+        )
+        
+        print("\n=== Training DQN ===")
+        model.learn(total_timesteps=500000, log_interval=100)
+        model.save("models/dqn/dqn_trading_env")
+        
+        mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=50)
+        self.results.append(("DQN", mean_reward, std_reward))
+        
+        print(f"\nDQN Evaluation - Mean reward: {mean_reward:.2f} +/- {std_reward:.2f}")
+        return model
 
-env = TradingEnv()
-env = Monitor(env)
-
-model_path = "models/dqn/dqn_trading_env"
-if os.path.exists(model_path + ".zip"):
-    print("Loading existing model...")
-    model = DQN.load(model_path, env=env)
-
-    model.learning_rate = 3e-6
-    model.buffer_size = 250000
-    model.learning_starts = 5000
-    model.batch_size = 64
-    model.tau = 0.005
-    model.gamma = 0.95
-    model.target_update_interval = 100
-    model.exploration_fraction = 0.1
-    model.exploration_final_eps = 0.02
-else:
-    print("Creating new model...")
-    model = DQN(
-        policy="MlpPolicy",
-        env=env,
-        learning_rate=3e-6,
-        buffer_size=250000,
-        learning_starts=5000,
-        batch_size=64,
-        tau=0.005,
-        gamma=0.95,
-        train_freq=4,
-        target_update_interval=100,
-        exploration_fraction=0.1,
-        exploration_final_eps=0.02,
-        verbose=1
-    )
-
-model.learn(total_timesteps=500000, log_interval=100, reset_num_timesteps=False)
-
-os.makedirs("models/dqn", exist_ok=True)
-model.save("models/dqn/dqn_trading_env")
-
-mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=50)
-print(f"DQN Mean reward: {mean_reward:.2f} +/- {std_reward:.2f}")
+if __name__ == "__main__":
+    trainer = DQNTrainer()
+    trainer.train()

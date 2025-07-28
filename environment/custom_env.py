@@ -10,17 +10,18 @@ class TradingEnv(gym.Env):
         self.initial_cash = 10000
         self.max_steps = 100
         self.max_shares = 100
-        self.transaction_cost = 0.001  # 0.1% per trade
-
-        # State: [cash, shares (5), prices (5)]
-        state_size = 1 + self.num_assets + self.num_assets
+        self.base_transaction_cost = 0.001
+        self.volatility_factor = 0.0005
+        self.max_concentration = 0.4
+        
+        # State: [cash, shares (5), prices (5), moving_avg (5), event_flag]
         self.observation_space = spaces.Box(
-            low=np.array([0] + [0] * self.num_assets + [0] * self.num_assets),
-            high=np.array([np.inf] + [self.max_shares] * self.num_assets + [np.inf] * self.num_assets),
+            low=np.array([0] + [0]*self.num_assets + [0]*self.num_assets + [0]*self.num_assets + [0]),
+            high=np.array([np.inf] + [self.max_shares]*self.num_assets + [np.inf]*self.num_assets + [np.inf]*self.num_assets + [1]),
             dtype=np.float32
         )
-        # Actions: 3 per asset (hold, buy, sell) + no-action = 16
-        self.action_space = spaces.Discrete(self.num_assets * 3 + 1)
+        
+        self.action_space = spaces.Discrete(self.num_assets * 3 + 1)  # 3 actions per asset + no-op
         self.renderer = None
         self.reset()
 
@@ -28,66 +29,104 @@ class TradingEnv(gym.Env):
         super().reset(seed=seed)
         self.step_count = 0
         self.cash = self.initial_cash
-        self.shares = np.ones(self.num_assets) * 50  # Start with 50 shares per asset
+        self.shares = np.ones(self.num_assets) * 50
         self.prices = np.random.uniform(50, 150, self.num_assets)
-        self.portfolio_value = self.cash + np.sum(self.shares * self.prices)
-        self.dividends = np.zeros(self.num_assets)  # For rendering
-        self.moving_avg = self.prices.copy()  # For rendering
-        self.compliance_flag = 1  # Dummy for rendering
+        self.price_history = [self.prices.copy()]
+        self.moving_avg = self.prices.copy()
+        self.event_flag = 0
+        self.dividends = np.zeros(self.num_assets)
+        self.compliance_flag = 1
+        
+        # Initialize correlation structure
+        self.correlation_matrix = np.array([
+            [1.0, 0.7, 0.3, -0.2, 0.1],
+            [0.7, 1.0, 0.5, -0.1, 0.2],
+            [0.3, 0.5, 1.0, 0.4, 0.3],
+            [-0.2, -0.1, 0.4, 1.0, 0.1],
+            [0.1, 0.2, 0.3, 0.1, 1.0]
+        ])
+        self.cholesky = np.linalg.cholesky(self.correlation_matrix)
+        
         return self._get_state(), {}
 
     def _get_state(self):
         return np.concatenate([
-            [self.cash], self.shares, self.prices
-        ], dtype=np.float32)
+            [self.cash], 
+            self.shares, 
+            self.prices,
+            self.moving_avg,
+            [self.event_flag]
+        ])
 
+    def _apply_market_event(self):
+        event_prob = 0.01
+        if np.random.random() < event_prob:
+            self.event_flag = 1
+            event_type = np.random.choice(['earnings', 'regulation', 'macro'])
+            impacts = {
+                'earnings': (0.1, -0.05),
+                'regulation': (-0.15, 0),
+                'macro': (0.07, -0.07)
+            }
+            impact = np.random.uniform(*impacts[event_type], size=self.num_assets)
+            self.prices *= (1 + impact)
+        else:
+            self.event_flag = 0
+            
     def step(self, action):
         self.step_count += 1
-        prev_portfolio_value = self.portfolio_value
-        reward = 0.0
-        self.dividends = np.zeros(self.num_assets)  # Reset for rendering
-
-        # Simulate stock price movement
-        self.prices += np.random.normal(0.6, 0.5, self.num_assets)
-        self.prices = np.maximum(0, self.prices)
-        self.moving_avg = 0.9 * self.moving_avg + 0.1 * self.prices  # For rendering
-
-        # Dividends every 5 steps
-        if self.step_count % 5 == 0:
-            self.dividends = np.random.uniform(0, 1, self.num_assets) * self.shares
-            self.cash += np.sum(self.dividends)
-            reward += np.sum(self.dividends) / self.initial_cash
-
-        # Process action
+        prev_value = self.portfolio_value
+        
+        # 1. Apply correlated price movements
+        noise = np.random.normal(0.6, 0.5, self.num_assets)
+        correlated_noise = self.cholesky @ noise
+        self.prices += correlated_noise
+        self.prices = np.maximum(1, self.prices)
+        self.price_history.append(self.prices.copy())
+        self.moving_avg = 0.9*self.moving_avg + 0.1*self.prices
+        
+        # 2. Apply market events
+        self._apply_market_event()
+        
+        # 3. Process action with dynamic costs
+        current_vol = np.std([p[-1] for p in self.price_history[-20:]]) if len(self.price_history) > 20 else 0
+        dynamic_cost = self.base_transaction_cost + current_vol * self.volatility_factor
+        
+        reward = 0
         if action < self.num_assets * 3:
             asset_idx = action // 3
             action_type = action % 3
-            if action_type == 0:  # Hold
-                reward += 0.01
-            elif action_type == 1:  # Buy
-                if self.cash >= self.prices[asset_idx]:
-                    cost = self.prices[asset_idx] * (1 + self.transaction_cost)
+            
+            if action_type == 1:  # Buy
+                cost = self.prices[asset_idx] * (1 + dynamic_cost)
+                if self.cash >= cost:
                     self.shares[asset_idx] += 1
                     self.cash -= cost
-                    reward -= cost / self.initial_cash
+                    reward -= dynamic_cost
             elif action_type == 2:  # Sell
+                revenue = self.prices[asset_idx] * (1 - dynamic_cost)
                 if self.shares[asset_idx] > 0:
-                    revenue = self.prices[asset_idx] * (1 - self.transaction_cost)
                     self.shares[asset_idx] -= 1
                     self.cash += revenue
-                    reward -= self.prices[asset_idx] * self.transaction_cost / self.initial_cash
-        elif action == self.num_assets * 3:  # No-action
-            reward += 0.01
+                    reward -= dynamic_cost
+        
+        # 4. Apply concentration penalty
+        port_values = self.shares * self.prices
+        weights = port_values / (self.portfolio_value + 1e-8)
+        if np.any(weights > self.max_concentration):
+            excess = np.sum(weights[weights > self.max_concentration] - self.max_concentration)
+            reward -= excess * 0.1
+            
+        # 5. Calculate returns
+        reward += (self.portfolio_value - prev_value) / self.initial_cash
+        
+        # 6. Termination
+        done = (self.step_count >= self.max_steps) or (self.portfolio_value < 0.1*self.initial_cash)
+        return self._get_state(), reward, done, False, {}
 
-        # Update portfolio value
-        self.portfolio_value = self.cash + np.sum(self.shares * self.prices)
-        reward += (self.portfolio_value - prev_portfolio_value) / self.initial_cash
-
-        # Termination conditions
-        done = self.step_count >= self.max_steps or self.portfolio_value < 0.1 * self.initial_cash
-        truncated = False
-        info = {}
-        return self._get_state(), reward, done, truncated, info
+    @property
+    def portfolio_value(self):
+        return self.cash + np.sum(self.shares * self.prices)
 
     def render(self, mode='human'):
         if self.renderer is None:
