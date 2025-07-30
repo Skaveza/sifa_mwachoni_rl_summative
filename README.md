@@ -1,83 +1,158 @@
-# Sifa Mwachoni RL Summative
+RL Summative: Multi-Asset Trading Environment
+This project implements and compares reinforcement learning (RL) agents—Deep Q-Network (DQN), REINFORCE, Proximal Policy Optimization (PPO), and Advantage Actor-Critic (A2C)—in a custom multi-asset trading environment. The agents manage a portfolio of five assets, optimizing trades under dynamic 0.1% transaction costs and 40% concentration limits. The project includes training scripts, visual demonstrations (GIF and MP4), and a performance report, built using Gymnasium, Stable Baselines3, PyTorch, Pygame, and OpenCV.
+Project Overview
+The trading environment simulates a market with five correlated assets (prices $50–$150), a 1% chance of market events, and a 0.6/step price trend. Agents observe a 16D state (cash, 5 shares, 5 prices, 5 moving averages, event flag) and select from 16 discrete actions (buy, sell, hold for each asset, plus no-op). The reward combines portfolio return, concentration penalties, and transaction costs. The goal is to maximize portfolio value over 100-step episodes, starting with $10,000 and 50 shares per asset.
+Key Outputs:
 
-## Overview
-This project implements a reinforcement learning (RL) environment for a simulated investment platform, inspired by the capstone project to provide Kenyan investors with access to global financial markets (NYSE stocks and ETFs) through a secure, compliance-first platform with automated dividend reinvestment (Auto-DRIP) and active trading tools. The goal is to compare RL methods (DQN, REINFORCE, PPO) in this custom environment, as part of a summative assignment.
+Models: Trained models for DQN, REINFORCE, PPO, and A2C.
+Visuals:
+results/random_agent.gif: 200-step random agent demonstration (price chart width halved to 640 pixels, legend on right showing asset colors).
+results/reinforce_performance.mp4: 3-minute video of REINFORCE agent (3 episodes, ~100 steps each, 30 fps, ~1.97 cumulative reward).
 
-## Repository Structure
-```
-sifa_mwachoni_rl_summative/
-├── environment/
-│   ├── custom_env.py                # Custom TradingEnv implementation
-│   └── __pycache__/
-├── implementation/
-│   ├── rendering.py                 # Pygame visualization and GIF generation
-│   └── __pycache__/
-├── training/
-│   ├── dqn_training.py             # DQN training script
-│   └── pg_training.py              # PPO/REINFORCE training script
-├── models/
-│   ├── dqn/                         # Saved DQN models
-│   └── pg/                          # Saved policy gradient models
-├── main.py                          # Script to generate random action GIF
-├── requirements.txt                 # Project dependencies
-├── README.md                        # Project documentation
-├── trading_env_random.gif           # Visualization of random actions
-└── venv/                            # Python virtual environment
-```
 
-## Implemented Components
+Report: results/report.md and results/report.pdf with performance metrics (50 episodes):
+DQN: 1.34 ± 0.14
+REINFORCE: 1.97 ± 0.22
+PPO: 1.95 ± 0.17
+A2C: 1.91 ± 0.18
 
-### Custom Environment (environment/custom_env.py)
-The TradingEnv class simulates a portfolio management scenario for Kenyan investors accessing NYSE stocks and ETFs. Key features:
 
-# State Space: Continuous, including:
-- Cash balance
-- Shares held for 5 assets
-- Asset prices
-- Dividend payouts
-- KYC compliance flag (1 = compliant, 0 = non-compliant)
-- 7-day moving averages for each asset
 
-# Action Space: Discrete, 26 actions:
-- Per asset (5 assets): Hold, Buy, Sell, Set Stop-Loss, Reinvest Dividends
-- No action (entire portfolio)
+Prerequisites
 
-# Rewards:
-- Portfolio value increase ((new - prev) / initial_cash)
-- Dividend income (sum(dividends) / initial_cash)
-- Auto-DRIP bonus (+0.05)
-- Stop-loss bonus/penalty (±0.1 based on price vs. moving average)
-- Transaction cost (-0.01 for buy/sell)
-- Invalid action penalty (-0.1)
-- Non-compliance penalty (-0.5)
+Python 3.8+
+macOS/Linux (for brew and ffmpeg)
+Git (for cloning the repository)
 
-# Dynamics:
-- Random walk for asset prices
-- Random dividends every 10 steps
-- Random KYC compliance checks (5% chance of non-compliance)
-- Stop-loss triggers at 95% of asset price
+Setup
 
-# Alignment with Capstone:
-Supports global market access (5 assets), Auto-DRIP, active trading (stop-loss), and KYC compliance.
-
-### Visualization (implementation/rendering.py)
-The Renderer class uses Pygame to visualize the environment. Run main.py to generate a GIF of random actions (trading_env_random.gif)
-
-# Displayed Components:
-- Portfolio value and cash (text)
-- KYC status (green/red circle)
-- Per asset: Price, moving average (text), shares (bar), dividends (text when non-zero)
-
-## Setup Instructions
-
-# Clone the Repository:
+Clone the Repository:
 git clone <repository-url>
 cd sifa_mwachoni_rl_summative
 
-# Set Up Virtual Environment:
+
+Create and Activate Virtual Environment:
 python -m venv venv
-source venv/bin/activate  # On macOS/Linux
+source venv/bin/activate
 
-# Install Dependencies:
+
+Install Dependencies:
 pip install -r requirements.txt
+brew install ffmpeg
+brew install pandoc
 
+Verify ffmpeg installation:
+ffmpeg -version
+
+Required Python packages (in requirements.txt):
+gymnasium
+stable-baselines3
+torch
+numpy
+pygame
+opencv-python
+imageio
+imageio-ffmpeg
+
+
+
+Project Structure
+sifa_mwachoni_rl_summative/
+├── environment/
+│   ├── custom_env.py        # Trading environment (16D state, 16 actions)
+├── implementation/
+│   ├── rendering.py         # Renders GIF and MP4 (price chart: 640px wide, legend on right)
+│   ├── render_pg.py         # REINFORCE model for video rendering
+├── training/
+│   ├── pg_training.py       # Trains REINFORCE, PPO, A2C
+│   ├── dqn_training.py      # Trains DQN
+├── models/
+│   ├── pg/
+│   │   ├── reinforce_trading_env.pth
+│   │   ├── ppo_trading_env.zip
+│   │   ├── a2c_trading_env.zip
+│   ├── dqn/
+│   │   ├── dqn_trading_env.zip
+├── results/
+│   ├── random_agent.gif     # Random agent demo
+│   ├── reinforce_performance.mp4  # REINFORCE agent video
+│   ├── performance_data.json  # Raw performance data
+├── main.py                  # Main script for training and output generation
+├── requirements.txt         # Dependencies
+├── README.md                # This file
+
+Usage
+Run the main script to train models, generate visuals, and produce the report:
+python main.py
+
+Expected Output
+
+Console:Running DQN training...
+Running policy gradient training...
+Recording random agent...
+Saved GIF to results/random_agent.gif
+Recording REINFORCE agent...
+Saved performance video to results/reinforce_performance.mp4
+Generated report at results/report.md
+Operation completed successfully!
+
+Visual Outputs
+
+Random Agent GIF (results/random_agent.gif):
+Shows a 200-step episode of a random agent.
+Price chart (640 pixels wide, x=50 to 690) displays 5 asset price histories (Red: Asset 1, Green: Asset 2, Blue: Asset 3, Yellow: Asset 4, Magenta: Asset 5).
+Legend on the right (x=710, y=290) lists asset colors.
+Displays portfolio metrics (total value, cash, return, step, cumulative reward).
+
+REINFORCE Video (results/reinforce_performance.mp4):
+3-minute video (3 episodes, ~100 steps each, 30 fps).
+Shows REINFORCE agent trading (~1.97 cumulative reward).
+Same chart and legend format as the GIF.
+
+
+Troubleshooting
+
+ModuleNotFoundError:
+Ensure rendering.py, render_pg.py in implementation/, custom_env.py in environment/.
+Run with explicit path:export PYTHONPATH=$PYTHONPATH:./implementation:./environment
+python main.py
+
+
+REINFORCE Model Not Found:
+Verify models/pg/reinforce_trading_env.pth.
+Rerun training:cd training
+python pg_training.py
+
+
+GIF/Video Fails:
+Confirm dependencies:ffmpeg -version
+pip show opencv-python imageio imageio-ffmpeg
+
+
+Run standalone REINFORCE video:cd implementation
+python -c "from rendering import record_agent_performance; from environment.custom_env import TradingEnv; from render_pg import REINFORCE; env = TradingEnv(); model = REINFORCE(env).load('../models/pg/reinforce_trading_env'); record_agent_performance(env, model, '../results/reinforce_performance.mp4', episodes=3, max_steps=100, fps=30)"
+
+
+Cumulative Reward is 0:
+Add debug print in rendering.py’s _draw_portfolio_metrics:# Edit implementation/rendering.py
+def _draw_portfolio_metrics(self, env):
+    print(f"Debug: episode_total_reward = {getattr(env, 'episode_total_reward', 0)}")
+    ...
+
+
+Verify custom_env.py updates episode_total_reward in step.
+
+
+Legend/Chart Issues:
+Check rendering.py’s _draw_price_chart for w=640, legend_x=710, legend_y=290.
+Adjust legend_x or legend_y if overlap occurs:# Edit implementation/rendering.py
+legend_x, legend_y = x + w + 20, y + 10  # Try legend_x = x + w + 30
+
+
+
+
+
+Notes
+
+The REINFORCE agent (1.97 ± 0.22) outperforms other RL models, due to transaction costs and concentration penalties.
+The random agent GIF includes a halved-width price chart (640 pixels) with a legend on the right for clarity.
