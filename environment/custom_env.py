@@ -23,6 +23,7 @@ class TradingEnv(gym.Env):
         
         self.action_space = spaces.Discrete(self.num_assets * 3 + 1)  # 3 actions per asset + no-op
         self.renderer = None
+        self.episode_total_reward = 0.0  # Added for rendering
         self.reset()
 
     def reset(self, seed=None, options=None):
@@ -36,6 +37,7 @@ class TradingEnv(gym.Env):
         self.event_flag = 0
         self.dividends = np.zeros(self.num_assets)
         self.compliance_flag = 1
+        self.episode_total_reward = 0.0  # Reset cumulative reward
         
         # Initialize correlation structure
         self.correlation_matrix = np.array([
@@ -120,7 +122,10 @@ class TradingEnv(gym.Env):
         # 5. Calculate returns
         reward += (self.portfolio_value - prev_value) / self.initial_cash
         
-        # 6. Termination
+        # 6. Update cumulative reward
+        self.episode_total_reward += reward
+        
+        # 7. Termination
         done = (self.step_count >= self.max_steps) or (self.portfolio_value < 0.1*self.initial_cash)
         return self._get_state(), reward, done, False, {}
 
