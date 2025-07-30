@@ -2,18 +2,18 @@
   "REINFORCE": [
     {
       "episode": 1,
-      "total_reward": 1.8115875692368288,
-      "final_value": 54225.258661153835
+      "total_reward": 2.23713406059478,
+      "final_value": 58077.42594695309
     },
     {
       "episode": 2,
-      "total_reward": 1.9098574853384898,
-      "final_value": 51723.21636593761
+      "total_reward": 1.9160125357044815,
+      "final_value": 51605.06786113971
     },
     {
       "episode": 3,
-      "total_reward": 1.730558488373537,
-      "final_value": 52683.6524776083
+      "total_reward": 2.275853768154908,
+      "final_value": 57003.23537485469
     }
   ]
 }

@@ -90,7 +90,7 @@ class Renderer:
                 self._draw_text(cell, 460 + j*180, y_pos, self.font_small, color)
 
     def _draw_price_chart(self, env):
-        x, y, w, h = 50, 280, 1280, 440
+        x, y, w, h = 50, 280, 640, 440  # Reduced width from 1280 to 640
         if not hasattr(env, 'price_history') or len(env.price_history) < 2:
             return
             
@@ -100,8 +100,11 @@ class Renderer:
         range_p = max_p - min_p if max_p != min_p else 1
         
         asset_colors = [
-            (255, 100, 100), (100, 255, 100), (100, 100, 255),
-            (255, 255, 100), (255, 100, 255)
+            (255, 100, 100),  # Red
+            (100, 255, 100),  # Green
+            (100, 100, 255),  # Blue
+            (255, 255, 100),  # Yellow
+            (255, 100, 255)   # Magenta
         ]
         
         for i in range(env.num_assets):
@@ -120,9 +123,17 @@ class Renderer:
                     2
                 )
         
-        # Draw event flag if active
+        # Draw legend to the right of the chart
+        legend_x, legend_y = x + w + 20, y + 10  # Right of chart (50+640+20=710, 280+10=290)
+        for i, color in enumerate(asset_colors[:env.num_assets]):
+            # Draw colored rectangle
+            pygame.draw.rect(self.screen, color, (legend_x, legend_y + i*25, 15, 15))
+            # Draw asset label
+            self._draw_text(f"Asset {i+1}", legend_x + 25, legend_y + i*25, self.font_small, self.colors['text'])
+        
+        # Draw event flag below legend
         if getattr(env, 'event_flag', 0):
-            self._draw_text("Market Event!", x + 20, y + h + 20, self.font_small, self.colors['bear'])
+            self._draw_text("Market Event!", legend_x, legend_y + env.num_assets*25 + 10, self.font_small, self.colors['bear'])
 
     def _draw_action(self, action, prices):
         if action == len(prices) * 3:  # No-op
@@ -188,7 +199,6 @@ def save_gif(env, filename="random_agent.gif", max_steps=200, fps=15):
     
     renderer.close()
     if frames:
-        # Save as GIF using imageio for better compatibility
         import imageio
         imageio.mimsave(filename, frames, fps=fps, loop=0)
         print(f"Saved GIF to {filename}")

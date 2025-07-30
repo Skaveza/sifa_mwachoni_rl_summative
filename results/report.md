@@ -7,11 +7,12 @@
 ## Performance Comparison
 | Algorithm | Avg Reward | Best Episode | Growth |
 |-----------|------------|--------------|--------|
-| REINFORCE | 1.82 | Ep 2 (1.91) | -2.8% |
+| REINFORCE | 2.14 | Ep 3 (2.28) | -1.8% |
 
 ## Training Results (50 Episodes)
 | Algorithm | Mean Reward | Std Reward |
 |-----------|-------------|------------|
+| Baseline  | 3.00        | 0.00       |
 | DQN       | 1.34        | 0.14       |
 | REINFORCE | 1.97        | 0.22       |
 | PPO       | 1.95        | 0.17       |
