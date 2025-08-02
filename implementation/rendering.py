@@ -1,21 +1,20 @@
+import os
 import pygame
 import numpy as np
 import cv2
 from typing import Optional, Dict, List
 
 class Renderer:
-    def __init__(self, width=1400, height=1000):
+    def __init__(self, width=1400, height=1000, show_cumulative_reward=True):
         pygame.init()
         self.screen = pygame.display.set_mode((width, height), pygame.SCALED)
         pygame.display.set_caption("AI Trading Dashboard")
         
-        # Font system
         self.font_xlarge = pygame.font.SysFont('Arial', 32, bold=True)
         self.font_large = pygame.font.SysFont('Arial', 24, bold=True)
         self.font_medium = pygame.font.SysFont('Consolas', 20)
         self.font_small = pygame.font.SysFont('Consolas', 16)
         
-        # Color scheme
         self.colors = {
             'background': (18, 18, 18),
             'panel': (30, 30, 30),
@@ -27,29 +26,24 @@ class Renderer:
             'chart': (100, 150, 255)
         }
         
-        # Layout
         self.padding = {'x': 30, 'y': 30, 'line': 35}
         self.clock = pygame.time.Clock()
         self.frame_count = 0
+        self.show_cumulative_reward = show_cumulative_reward
 
     def render(self, env):
-        """Main rendering function"""
         self.screen.fill(self.colors['background'])
         self.frame_count += 1
         
-        # Portfolio Panel
         self._draw_panel(30, 30, 400, 200, "PORTFOLIO")
         self._draw_portfolio_metrics(env)
         
-        # Assets Panel
         self._draw_panel(450, 30, 900, 200, "ASSETS")
         self._draw_asset_positions(env)
         
-        # Chart Panel
         self._draw_panel(30, 250, 1320, 500, "PRICE HISTORY")
         self._draw_price_chart(env)
         
-        # Action Highlight
         if hasattr(env, 'last_action'):
             self._draw_action(env.last_action, env.prices)
         
@@ -61,9 +55,10 @@ class Renderer:
             f"Total Value: ${env.portfolio_value:,.2f}",
             f"Cash: ${env.cash:,.2f}",
             f"Return: {(env.portfolio_value/env.initial_cash-1)*100:+.2f}%",
-            f"Step: {env.step_count}/{env.max_steps}",
-            f"Cumulative Reward: {getattr(env, 'episode_total_reward', 0):+.2f}"
+            f"Step: {env.step_count}/{env.max_steps}"
         ]
+        if self.show_cumulative_reward:
+            metrics.append(f"Cumulative Reward: {getattr(env, 'episode_total_reward', 0):+.2f}")
         for i, text in enumerate(metrics):
             self._draw_text(text, 50, 60 + i*35, self.font_medium)
 
@@ -90,7 +85,7 @@ class Renderer:
                 self._draw_text(cell, 460 + j*180, y_pos, self.font_small, color)
 
     def _draw_price_chart(self, env):
-        x, y, w, h = 50, 280, 640, 440  # Reduced width from 1280 to 640
+        x, y, w, h = 50, 280, 640, 440
         if not hasattr(env, 'price_history') or len(env.price_history) < 2:
             return
             
@@ -100,11 +95,11 @@ class Renderer:
         range_p = max_p - min_p if max_p != min_p else 1
         
         asset_colors = [
-            (255, 100, 100),  # Red
-            (100, 255, 100),  # Green
-            (100, 100, 255),  # Blue
-            (255, 255, 100),  # Yellow
-            (255, 100, 255)   # Magenta
+            (255, 100, 100),
+            (100, 255, 100),
+            (100, 100, 255),
+            (255, 255, 100),
+            (255, 100, 255)
         ]
         
         for i in range(env.num_assets):
@@ -123,20 +118,16 @@ class Renderer:
                     2
                 )
         
-        # Draw legend to the right of the chart
-        legend_x, legend_y = x + w + 20, y + 10  # Right of chart (50+640+20=710, 280+10=290)
+        legend_x, legend_y = x + w + 20, y + 10
         for i, color in enumerate(asset_colors[:env.num_assets]):
-            # Draw colored rectangle
             pygame.draw.rect(self.screen, color, (legend_x, legend_y + i*25, 15, 15))
-            # Draw asset label
             self._draw_text(f"Asset {i+1}", legend_x + 25, legend_y + i*25, self.font_small, self.colors['text'])
         
-        # Draw event flag below legend
         if getattr(env, 'event_flag', 0):
             self._draw_text("Market Event!", legend_x, legend_y + env.num_assets*25 + 10, self.font_small, self.colors['bear'])
 
     def _draw_action(self, action, prices):
-        if action == len(prices) * 3:  # No-op
+        if action == len(prices) * 3:
             return
             
         asset_idx = action // 3
@@ -146,7 +137,6 @@ class Renderer:
                   self.colors['bear'] if action_type == 2 else \
                   (100, 100, 255)
         
-        # Animated background
         alpha = 128 + int(127 * np.sin(self.frame_count * 0.1))
         s = pygame.Surface((250, 40), pygame.SRCALPHA)
         pygame.draw.rect(s, (*bg_color, alpha), (0, 0, 250, 40), border_radius=5)
@@ -178,13 +168,14 @@ class Renderer:
     def close(self):
         pygame.quit()
 
-def save_gif(env, filename="random_agent.gif", max_steps=200, fps=15):
-    """Record random agent as GIF"""
-    renderer = Renderer()
+def save_gif(env, filename="results/random_agent.gif", max_steps=200, fps=15):
+    renderer = Renderer(show_cumulative_reward=False)
     frames = []
     obs, _ = env.reset()
+    step_count = 0
+    episode_count = 0
     
-    for _ in range(max_steps):
+    while step_count < max_steps:
         action = env.action_space.sample()
         obs, _, done, truncated, _ = env.step(action)
         env.last_action = action
@@ -194,27 +185,31 @@ def save_gif(env, filename="random_agent.gif", max_steps=200, fps=15):
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         frames.append(frame)
         
-        if done or truncated:
-            break
+        step_count += 1
+        if done or truncated or step_count % 100 == 0:
+            obs, _ = env.reset()
+            episode_count += 1
+            print(f"Completed episode {episode_count} at step {step_count}")
     
     renderer.close()
     if frames:
         import imageio
+        os.makedirs("results", exist_ok=True)
         imageio.mimsave(filename, frames, fps=fps, loop=0)
         print(f"Saved GIF to {filename}")
 
 def record_agent_performance(
     env,
     model,
-    filename="agent_performance.mp4",
+    filename="results/agent_performance.mp4",
     episodes=3,
     max_steps=100,
     fps=30
 ) -> Optional[List[Dict]]:
-    """Record agent performance as MP4"""
-    renderer = Renderer()
+    renderer = Renderer(show_cumulative_reward=True)
     frame_size = (1400, 1000)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    os.makedirs("results", exist_ok=True)
     writer = cv2.VideoWriter(filename, fourcc, fps, frame_size)
     
     episode_data = []

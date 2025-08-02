@@ -1,16 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
 import os
-from environment.custom_env import TradingEnv
-from implementation.reinforce import REINFORCE
-import torch
-from stable_baselines3 import DQN, PPO, A2C
+import sys
 from typing import Dict, List
+
+# Add project root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
+from environment.custom_env import TradingEnv
+from implementation.render_pg import REINFORCE
+from stable_baselines3 import DQN, PPO, A2C
+
 def load_training_data():
-    """Load training data from saved .npy files."""
     models = ["DQN", "REINFORCE", "PPO", "A2C"]
     data = {}
     
@@ -35,7 +36,6 @@ def load_training_data():
     return data
 
 def plot_cumulative_rewards(data: Dict[str, Dict], output_dir="results"):
-    """Generate individual and combined cumulative reward plots."""
     os.makedirs(output_dir, exist_ok=True)
     models = ["DQN", "REINFORCE", "PPO", "A2C"]
     
@@ -64,7 +64,6 @@ def plot_cumulative_rewards(data: Dict[str, Dict], output_dir="results"):
     plt.close()
 
 def plot_objective_functions(data: Dict[str, Dict], output_dir="results"):
-    """Plot Q-loss for DQN and policy entropy for PG methods."""
     os.makedirs(output_dir, exist_ok=True)
     
     if "DQN" in data and "q_loss" in data["DQN"]:
@@ -91,7 +90,6 @@ def plot_objective_functions(data: Dict[str, Dict], output_dir="results"):
     plt.close()
 
 def test_unseen_states(env, models: Dict, episodes=10) -> Dict[str, List[Dict]]:
-    """Test trained models on unseen initial states."""
     performance_data = {}
     
     def modified_reset(self, seed=None):
@@ -135,7 +133,6 @@ def test_unseen_states(env, models: Dict, episodes=10) -> Dict[str, List[Dict]]:
     return performance_data
 
 def analyze_stability(data: Dict[str, Dict], threshold=0.05, window=5):
-    """Analyze episodes required for stable performance."""
     stability_info = {}
     for model in data:
         if "raw_rewards" not in data[model]:
@@ -160,7 +157,6 @@ def analyze_stability(data: Dict[str, Dict], threshold=0.05, window=5):
     return stability_info
 
 def generate_analysis_report(training_data: Dict, unseen_data: Dict, stability_info: Dict, output_dir="results"):
-    """Generate markdown report with plots and stability analysis."""
     os.makedirs(output_dir, exist_ok=True)
     report = """# RL Trading Agent Metric Analysis
 
@@ -202,7 +198,6 @@ Below are the cumulative reward plots for each model over training episodes. The
     print(f"Generated analysis report at {output_dir}/analysis_report.md")
 
 def main():
-    """Run metric analysis and generate report."""
     os.makedirs("results", exist_ok=True)
     
     training_data = load_training_data()
