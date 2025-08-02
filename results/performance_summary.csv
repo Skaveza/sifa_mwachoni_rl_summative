@@ -1,0 +1,5 @@
+Model,Final Cumulative Reward,Final Avg Reward,Best Episode Reward,Worst Episode Reward,Reward Stability (Std),Episodes to 90% Performance,Episodes to Convergence,Sample Efficiency Rank
+DQN,6778,1.30,2.17,0.30,0.17,N/A,662,0
+REINFORCE,4639,1.54,2.15,0.65,0.14,N/A,100,0
+PPO,5450,1.85,2.45,0.87,0.21,1,100,1
+A2C,5807,1.94,2.59,0.89,0.18,N/A,100,0
