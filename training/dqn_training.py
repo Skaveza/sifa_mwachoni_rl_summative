@@ -4,19 +4,37 @@ import numpy as np
 from stable_baselines3 import DQN
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.callbacks import BaseCallback
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from environment.custom_env import TradingEnv
+
+class TrainingCallback(BaseCallback):
+    def __init__(self, verbose=0):
+        super(TrainingCallback, self).__init__(verbose)
+        self.episode_rewards = []
+        self.q_losses = []
+        self.current_rewards = []
+    
+    def _on_step(self) -> bool:
+        self.current_rewards.append(self.locals["rewards"])
+        if self.locals["dones"]:
+            self.episode_rewards.append(sum(self.current_rewards))
+            self.current_rewards = []
+        if "loss" in self.locals:
+            self.q_losses.append(self.locals["loss"])
+        return True
 
 class DQNTrainer:
     def __init__(self):
         self.results = []
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.dirname(current_dir)
-        sys.path.append(project_root)
         
     def train(self):
         env = Monitor(TradingEnv())
         os.makedirs("models/dqn", exist_ok=True)
         
+        callback = TrainingCallback()
         model = DQN(
             policy="MlpPolicy",
             env=env,
@@ -35,15 +53,17 @@ class DQNTrainer:
         )
         
         print("\n=== Training DQN ===")
-        model.learn(total_timesteps=500000, log_interval=100)
+        model.learn(total_timesteps=500000, log_interval=100, callback=callback)
         model.save("models/dqn/dqn_trading_env")
         
         mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=50)
         self.results.append(("DQN", mean_reward, std_reward))
         
         print(f"\nDQN Evaluation - Mean reward: {mean_reward:.2f} +/- {std_reward:.2f}")
-        return model
+        return model, callback.episode_rewards, callback.q_losses
 
 if __name__ == "__main__":
     trainer = DQNTrainer()
-    trainer.train()
+    model, episode_rewards, q_losses = trainer.train()
+    np.save("results/dqn_episode_rewards.npy", episode_rewards)
+    np.save("results/dqn_q_losses.npy", q_losses)
