@@ -6,6 +6,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import BaseCallback
 
+# Add project root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from environment.custom_env import TradingEnv
@@ -33,6 +34,7 @@ class DQNTrainer:
     def train(self):
         env = Monitor(TradingEnv())
         os.makedirs("models/dqn", exist_ok=True)
+        os.makedirs("results", exist_ok=True)
         
         callback = TrainingCallback()
         model = DQN(
@@ -60,10 +62,13 @@ class DQNTrainer:
         self.results.append(("DQN", mean_reward, std_reward))
         
         print(f"\nDQN Evaluation - Mean reward: {mean_reward:.2f} +/- {std_reward:.2f}")
+        np.save("results/dqn_episode_rewards.npy", callback.episode_rewards)
+        np.save("results/dqn_q_losses.npy", callback.q_losses)
         return model, callback.episode_rewards, callback.q_losses
 
 if __name__ == "__main__":
     trainer = DQNTrainer()
     model, episode_rewards, q_losses = trainer.train()
+    os.makedirs("results", exist_ok=True)
     np.save("results/dqn_episode_rewards.npy", episode_rewards)
     np.save("results/dqn_q_losses.npy", q_losses)

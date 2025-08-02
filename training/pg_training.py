@@ -25,8 +25,10 @@ class PGCallback(BaseCallback):
     
     def _on_step(self) -> bool:
         self.current_rewards.append(self.locals["rewards"])
-        if "entropies" in self.locals:
-            self.entropies.append(self.locals["entropies"])
+        # Collect entropy for PPO and A2C
+        if "policy_loss" in self.locals:
+            entropy = self.locals.get("entropy_loss", 0)
+            self.entropies.append(entropy)
         if self.locals["dones"]:
             self.episode_rewards.append(sum(self.current_rewards))
             self.current_rewards = []

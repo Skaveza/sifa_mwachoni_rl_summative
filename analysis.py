@@ -207,18 +207,14 @@ def main():
     env = TradingEnv()
     models = {}
     try:
-        reinforce_path = "models/pg/reinforce_trading_env"
-        if os.path.exists(reinforce_path + ".pth"):
-            models["REINFORCE"] = REINFORCE(env).load(reinforce_path)
-        
-        for model_name, path in [
-            ("DQN", "models/dqn/dqn_trading_env"),
-            ("PPO", "models/pg/ppo_trading_env"),
-            ("A2C", "models/pg/a2c_trading_env")
+        for model_name, model_class, path, ext in [
+            ("DQN", DQN, "models/dqn/dqn_trading_env", ".zip"),
+            ("REINFORCE", REINFORCE, "models/pg/reinforce_trading_env", ".pth"),
+            ("PPO", PPO, "models/pg/ppo_trading_env", ".zip"),
+            ("A2C", A2C, "models/pg/a2c_trading_env", ".zip")
         ]:
-            if os.path.exists(path + ".zip"):
-                model_class = globals()[model_name]
-                models[model_name] = model_class.load(path, env=env)
+            if os.path.exists(path + ext):
+                models[model_name] = model_class.load(path, env=env) if model_name != "REINFORCE" else model_class(env).load(path)
     
     except Exception as e:
         print(f"Error loading models: {str(e)}")
